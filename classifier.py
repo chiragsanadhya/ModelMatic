@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import train_test_split
 
 def preprocess_data(df, columns_to_remove):
     df = df.drop(columns=columns_to_remove, axis=1, errors='ignore')
@@ -22,17 +23,17 @@ def encode_data(df, df_test):
         if df[column].dtype == 'object':
             encoder = LabelEncoder()
             df[column] = encoder.fit_transform(df[column].astype(str))
-            df_test[column] = encoder.transform(df_test[column].astype(str))
+            if column in df_test.columns:
+                df_test[column] = encoder.transform(df_test[column].astype(str))
             encoders[column] = encoder
     with open('encoders.pkl', 'wb') as file:
         pickle.dump(encoders, file)
     return df, df_test
 
-def prepare_data(df, df_test, target):
-    X_train = df.drop(target, axis=1, errors='ignore')
-    y_train = df[target]
-    X_test = df_test
-    return X_train, y_train, X_test
+def prepare_data(df, target):
+    X = df.drop(target, axis=1, errors='ignore')
+    y = df[target]
+    return X, y
 
 def fit_and_predict(X_train, y_train, X_test, classifier):
     clf = classifier()
@@ -40,60 +41,61 @@ def fit_and_predict(X_train, y_train, X_test, classifier):
     y_test = clf.predict(X_test)
     return y_test
 
-def create_output(test_id, y_test, target):
-    output = pd.DataFrame({'PassengerId': test_id.values, target: y_test})
+def create_output(df_test, y_test, target):
+    if isinstance(df_test, pd.DataFrame) and 'PassengerId' in df_test.columns:
+        if len(df_test) == len(y_test):
+            output = pd.DataFrame({'PassengerId': df_test['PassengerId'].values, target: y_test})
+        else:
+            output = pd.DataFrame({target: y_test})
+    else:
+        output = pd.DataFrame({target: y_test})
     return output
 
 def decode_output(output):
-    with open('encoders.pkl', 'rb') as file:
-        encoders = pickle.load(file)
-    for column, encoder in encoders.items():
-        if column in output.columns:
-            output[column] = encoder.inverse_transform(output[column])
+    try:
+        with open('encoders.pkl', 'rb') as file:
+            encoders = pickle.load(file)
+        for column, encoder in encoders.items():
+            if column in output.columns:
+                output[column] = encoder.inverse_transform(output[column])
+    except FileNotFoundError:
+        st.warning("Encoders file not found. Skipping decoding.")
     return output
 
-
+# Streamlit app
 st.title('Prediction Model (Classification problem)')
 
-uploaded_train = st.file_uploader("Upload training CSV file", type=["csv"])
-uploaded_test = st.file_uploader("Upload test CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-if uploaded_train and uploaded_test:
-    df = pd.read_csv(uploaded_train)
-    df_test = pd.read_csv(uploaded_test)
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
 
-    st.write("Training Data Preview:")
+    st.write("Data Preview:")
     st.write(df.head())
 
-    st.write("Test Data Preview:")
-    st.write(df_test.head())
-
+    target = st.text_input("Enter the target column name", "Survived")
     columns_to_remove_input = st.text_input("Enter columns to remove (comma-separated)", "")
     columns_to_remove = [col.strip() for col in columns_to_remove_input.split(",") if col.strip()]
 
-
+    # Preprocess data
     df = preprocess_data(df, columns_to_remove)
-    df_test = preprocess_data(df_test, columns_to_remove)
 
-    st.write("Preprocessed Training Data Preview:")
+    st.write("Preprocessed Data Preview:")
     st.write(df.head())
 
-    st.write("Preprocessed Test Data Preview:")
-    st.write(df_test.head())
+    # Train-test split ratio
+    split_ratio = st.slider("Select train-test split ratio (percentage for training data)", 1, 99, 80)
+    X, y = prepare_data(df, target)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(100 - split_ratio) / 100, random_state=42)
 
-
-    df, df_test = encode_data(df, df_test)
+    # Encode data
+    X_train, X_test = encode_data(X_train, X_test)
 
     st.write("Encoded Training Data Preview:")
-    st.write(df.head())
+    st.write(X_train.head())
 
     st.write("Encoded Test Data Preview:")
-    st.write(df_test.head())
-
-
-    target = "Survived"
-    X_train, y_train, X_test = prepare_data(df, df_test, target)
-
+    st.write(X_test.head())
 
     classifiers = {
         "Logistic Regression": LogisticRegression,
@@ -110,13 +112,13 @@ if uploaded_train and uploaded_test:
 
     if st.button("Run Model"):
         classifier = classifiers[classifier_choice]
-        y_test = fit_and_predict(X_train, y_train, X_test, classifier)
+        y_pred = fit_and_predict(X_train, y_train, X_test, classifier)
 
+        # Create output
+        test_id = df.get('PassengerId', pd.DataFrame()) # Get test IDs if available
+        output = create_output(test_id, y_pred, target)
 
-        test_id = df_test['PassengerId']
-        output = create_output(test_id, y_test, target)
-
-
+        # Decode output
         output = decode_output(output)
 
         st.write("Final Output:")
