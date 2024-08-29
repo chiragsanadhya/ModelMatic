@@ -62,7 +62,7 @@ def decode_output(output):
         st.warning("Encoders file not found. Skipping decoding.")
     return output
 
-# Streamlit app
+
 st.title('Prediction Model (Classification problem)')
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
@@ -77,18 +77,18 @@ if uploaded_file:
     columns_to_remove_input = st.text_input("Enter columns to remove (comma-separated)", "")
     columns_to_remove = [col.strip() for col in columns_to_remove_input.split(",") if col.strip()]
 
-    # Preprocess data
+
     df = preprocess_data(df, columns_to_remove)
 
     st.write("Preprocessed Data Preview:")
     st.write(df.head())
 
-    # Train-test split ratio
+
     split_ratio = st.slider("Select train-test split ratio (percentage for training data)", 1, 99, 80)
     X, y = prepare_data(df, target)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(100 - split_ratio) / 100, random_state=42)
 
-    # Encode data
+
     X_train, X_test = encode_data(X_train, X_test)
 
     st.write("Encoded Training Data Preview:")
@@ -114,11 +114,11 @@ if uploaded_file:
         classifier = classifiers[classifier_choice]
         y_pred = fit_and_predict(X_train, y_train, X_test, classifier)
 
-        # Create output
+
         test_id = df.get('PassengerId', pd.DataFrame()) # Get test IDs if available
         output = create_output(test_id, y_pred, target)
 
-        # Decode output
+
         output = decode_output(output)
 
         st.write("Final Output:")

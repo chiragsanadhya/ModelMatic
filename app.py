@@ -21,10 +21,10 @@ from sklearn.naive_bayes import GaussianNB
 
 
 
-# Configure page
+
 st.set_page_config(page_title="Automated Model Training", layout="wide", initial_sidebar_state="expanded")
 
-# Sidebar for navigation
+
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Select a page:", ["Regression", "Classification"])
 
@@ -41,7 +41,7 @@ if page == "Regression":
         target = st.text_input("Enter target column name", "")
 
         if target:
-            reg_model = RegressionModel(model=None)  # Replace `None` with a default model if needed
+            reg_model = RegressionModel(model=None)  
             df = reg_model.preprocess_data(df, columns_to_remove)
             st.write("Preprocessed Data Preview:")
             st.write(df.head())
@@ -84,7 +84,7 @@ elif page == "Classification":
         columns_to_remove = [col.strip() for col in columns_to_remove_input.split(",") if col.strip()]
 
         if target:
-            clf_model = ClassificationModel(model=None)  # Replace `None` with a default model if needed
+            clf_model = ClassificationModel(model=None)  
             df = clf_model.preprocess_data(df, columns_to_remove)
             st.write("Preprocessed Data Preview:")
             st.write(df.head())

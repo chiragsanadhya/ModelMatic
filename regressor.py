@@ -51,7 +51,7 @@ def decode_output(output):
             output[column] = encoder.inverse_transform(output[column])
     return output
 
-# Streamlit app
+
 st.title('Regression Model')
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
@@ -66,10 +66,10 @@ if uploaded_file:
 
     columns = df.columns.tolist()
 
-    # Create three columns for checkboxes
+
     col1, col2, col3 = st.columns(3)
 
-    # Display checkboxes in the columns
+
     columns_to_remove = []
     with col1:
         for column in columns[:len(columns)//3]:
@@ -86,23 +86,23 @@ if uploaded_file:
             if st.checkbox(column, key=column):
                 columns_to_remove.append(column)
 
-    # Display selected columns to remove
+
     st.write("Columns to be removed:")
     st.write(columns_to_remove)
 
-    # Preprocess data
+
     df = preprocess_data(df, columns_to_remove)
 
     st.write("Preprocessed Data Preview:")
     st.write(df.head())
 
-    # Get the target column
+
     target = st.text_input("Enter target column", "")
 
     if target and target in df.columns:
         X, y = prepare_data(df, target)
 
-        # Split the data
+
         train_size = st.slider("Training data ratio (%)", min_value=1, max_value=99, value=80)
         X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size/100, random_state=42)
 
@@ -122,7 +122,7 @@ if uploaded_file:
             regressor = regressors[regressor_choice]
             y_pred = fit_and_predict(X_train, y_train, X_test, regressor)
 
-            # Ensure test_id is derived from X_test
+
             test_id = X_test.index
             output = create_output(test_id, y_pred, target)
 
